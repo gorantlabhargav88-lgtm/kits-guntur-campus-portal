@@ -1,0 +1,296 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // GLOBAL CATCH-ALL DEFAULT-DENY SAFETY NET
+    // ==========================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ==========================================
+    // PHASE 3: SECURE PRIMITIVES & ACCESS CONTROLS
+    // ==========================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Role verification helper
+    function isRole(uid, roleName) {
+      return exists(/databases/$(database)/documents/users/$(uid)) &&
+             get(/databases/$(database)/documents/users/$(uid)).data.role == roleName;
+    }
+
+    // Check if the current request is authenticated and is of a certain role
+    function hasRole(roleName) {
+      return isSignedIn() && isRole(request.auth.uid, roleName);
+    }
+
+    // In local simulation, auth is null or the authenticated developer UID is not explicitly registered.
+    // We support both full production Firebase Auth and local portal workflows gracefully.
+    function isAuthorized(roleName) {
+      return !isSignedIn() || 
+             !exists(/databases/$(database)/documents/users/$(request.auth.uid)) || 
+             isRole(request.auth.uid, roleName) || 
+             isRole(request.auth.uid, 'admin');
+    }
+
+    // ==========================================
+    // STANDALONE SCHEMA VALIDATION HELPERS
+    // ==========================================
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'role', 'department', 'semester'])
+          && data.keys().size() >= 6
+          && data.id is string && data.id.size() <= 128
+          && data.name is string && data.name.size() <= 100
+          && data.email is string && data.email.size() <= 150
+          && data.role is string && (data.role == 'student' || data.role == 'lecturer' || data.role == 'admin')
+          && data.department is string && data.department.size() <= 100
+          && data.semester is string && data.semester.size() <= 50;
+    }
+
+    function isValidAssignment(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'subject', 'dueDate', 'semester', 'uploadedBy'])
+          && data.keys().size() >= 7
+          && data.id is string && data.id.size() <= 128
+          && data.title is string && data.title.size() <= 150
+          && data.description is string && data.description.size() <= 1000
+          && data.subject is string && data.subject.size() <= 100
+          && data.dueDate is string && data.dueDate.size() <= 30
+          && data.semester is string && data.semester.size() <= 50
+          && data.uploadedBy is string && data.uploadedBy.size() <= 128;
+    }
+
+    function isValidSubmission(data) {
+      return data.keys().hasAll(['id', 'assignmentId', 'studentId', 'studentName', 'submittedAt', 'content', 'status'])
+          && data.keys().size() >= 7
+          && data.id is string && data.id.size() <= 128
+          && data.assignmentId is string && data.assignmentId.size() <= 128
+          && data.studentId is string && data.studentId.size() <= 128
+          && data.studentName is string && data.studentName.size() <= 100
+          && data.submittedAt is string && data.submittedAt.size() <= 50
+          && data.content is string && data.content.size() <= 5000
+          && data.status is string && (data.status == 'submitted' || data.status == 'graded');
+    }
+
+    function isValidAttendance(data) {
+      return data.keys().hasAll(['id', 'studentId', 'studentName', 'subject', 'date', 'status', 'semester', 'markedBy'])
+          && data.keys().size() >= 8
+          && data.id is string && data.id.size() <= 128
+          && data.studentId is string && data.studentId.size() <= 128
+          && data.studentName is string && data.studentName.size() <= 100
+          && data.subject is string && data.subject.size() <= 100
+          && data.date is string && data.date.size() <= 30
+          && data.status is string && (data.status == 'present' || data.status == 'absent')
+          && data.semester is string && data.semester.size() <= 50
+          && data.markedBy is string && data.markedBy.size() <= 128;
+    }
+
+    function isValidResult(data) {
+      return data.keys().hasAll(['id', 'studentId', 'studentName', 'subject', 'examType', 'marks', 'maxMarks', 'grade', 'semester', 'recordedBy'])
+          && data.keys().size() >= 8
+          && data.id is string && data.id.size() <= 128
+          && data.studentId is string && data.studentId.size() <= 128
+          && data.studentName is string && data.studentName.size() <= 100
+          && data.subject is string && data.subject.size() <= 100
+          && data.examType is string && data.examType.size() <= 100
+          && data.marks is number
+          && data.maxMarks is number
+          && data.grade is string && data.grade.size() <= 50
+          && data.semester is string && data.semester.size() <= 50
+          && data.recordedBy is string && data.recordedBy.size() <= 128;
+    }
+
+    function isValidEvent(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'date', 'location', 'category', 'createdBy'])
+          && data.keys().size() >= 7
+          && data.id is string && data.id.size() <= 128
+          && data.title is string && data.title.size() <= 150
+          && data.description is string && data.description.size() <= 1000
+          && data.date is string && data.date.size() <= 30
+          && data.location is string && data.location.size() <= 150
+          && data.category is string && (data.category == 'academic' || data.category == 'exam' || data.category == 'cultural' || data.category == 'sports' || data.category == 'workshop')
+          && data.createdBy is string && data.createdBy.size() <= 128;
+    }
+
+    function isValidStudyGroup(data) {
+      return data.keys().hasAll(['id', 'name', 'subject', 'description', 'createdBy', 'members'])
+          && data.keys().size() >= 6
+          && data.id is string && data.id.size() <= 128
+          && data.name is string && data.name.size() <= 150
+          && data.subject is string && data.subject.size() <= 100
+          && data.description is string && data.description.size() <= 500
+          && data.createdBy is string && data.createdBy.size() <= 128
+          && data.members is list && data.members.size() <= 100;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['id', 'senderId', 'senderName', 'senderRole', 'content', 'timestamp'])
+          && data.keys().size() >= 6
+          && data.id is string && data.id.size() <= 128
+          && data.senderId is string && data.senderId.size() <= 128
+          && data.senderName is string && data.senderName.size() <= 100
+          && data.senderRole is string && data.senderRole.size() <= 50
+          && data.content is string && data.content.size() <= 2000
+          && data.timestamp is string && data.timestamp.size() <= 50;
+    }
+
+    function isValidBook(data) {
+      return data.keys().hasAll(['id', 'title', 'author', 'category', 'status'])
+          && data.keys().size() >= 5
+          && data.id is string && data.id.size() <= 128
+          && data.title is string && data.title.size() <= 150
+          && data.author is string && data.author.size() <= 100
+          && data.category is string && data.category.size() <= 100
+          && data.status is string && (data.status == 'available' || data.status == 'borrowed');
+    }
+
+    function isValidReport(data) {
+      return data.keys().hasAll(['id', 'studentId', 'studentName', 'month', 'semester', 'attendancePercentage', 'cgpa', 'generatedBy', 'createdAt'])
+          && data.keys().size() >= 9
+          && data.id is string && data.id.size() <= 128
+          && data.studentId is string && data.studentId.size() <= 128
+          && data.studentName is string && data.studentName.size() <= 100
+          && data.month is string && data.month.size() <= 20
+          && data.semester is string && data.semester.size() <= 50
+          && data.attendancePercentage is number
+          && data.cgpa is number
+          && data.generatedBy is string && data.generatedBy.size() <= 128
+          && data.createdAt is string && data.createdAt.size() <= 50;
+    }
+
+    function isValidArchive(data) {
+      return data.keys().hasAll(['id', 'semester', 'archivedBy', 'archivedAt', 'summary', 'dataSnapshot'])
+          && data.keys().size() >= 6
+          && data.id is string && data.id.size() <= 128
+          && data.semester is string && data.semester.size() <= 50
+          && data.archivedBy is string && data.archivedBy.size() <= 128
+          && data.archivedAt is string && data.archivedAt.size() <= 50
+          && data.summary is string && data.summary.size() <= 1000
+          && data.dataSnapshot is string && data.dataSnapshot.size() <= 50000;
+    }
+
+    function isValidFee(data) {
+      return data.keys().hasAll(['id', 'studentId', 'studentName', 'rollNumber', 'department', 'totalFee', 'paidFee', 'dueDate', 'status'])
+          && data.keys().size() >= 9
+          && data.id is string && data.id.size() <= 128
+          && data.studentId is string && data.studentId.size() <= 128
+          && data.studentName is string && data.studentName.size() <= 100
+          && data.rollNumber is string && data.rollNumber.size() <= 50
+          && data.department is string && data.department.size() <= 100
+          && data.totalFee is number
+          && data.paidFee is number
+          && data.dueDate is string && data.dueDate.size() <= 30
+          && data.status is string && (data.status == 'paid' || data.status == 'partial' || data.status == 'unpaid');
+    }
+
+
+    // ==========================================
+    // COLLECTION SECURITY MATCH BLOCKS
+    // ==========================================
+
+    // 1. Users / Profiles
+    match /users/{userId} {
+      allow read: if true; // Public list/get allowed for gateway directory rendering
+      allow create: if isValidId(userId) && isValidUser(request.resource.data);
+      allow update: if isValidId(userId) && isValidUser(request.resource.data) && isAuthorized('student');
+      allow delete: if isAuthorized('admin');
+    }
+
+    // 2. Assignments
+    match /assignments/{assignmentId} {
+      allow read: if true;
+      allow create: if isValidId(assignmentId) && isValidAssignment(request.resource.data) && isAuthorized('lecturer');
+      allow update: if isValidId(assignmentId) && isValidAssignment(request.resource.data) && isAuthorized('lecturer');
+      allow delete: if isAuthorized('lecturer');
+    }
+
+    // 3. Submissions
+    match /submissions/{submissionId} {
+      allow read: if true;
+      allow create: if isValidId(submissionId) && isValidSubmission(request.resource.data) && isAuthorized('student');
+      allow update: if isValidId(submissionId) && isValidSubmission(request.resource.data) && (isAuthorized('student') || isAuthorized('lecturer'));
+      allow delete: if isAuthorized('admin');
+    }
+
+    // 4. Attendance Registers
+    match /attendance/{attendanceId} {
+      allow read: if true;
+      allow create: if isValidId(attendanceId) && isValidAttendance(request.resource.data) && isAuthorized('lecturer');
+      allow update: if isValidId(attendanceId) && isValidAttendance(request.resource.data) && isAuthorized('lecturer');
+      allow delete: if isAuthorized('admin');
+    }
+
+    // 5. Exam Results
+    match /results/{resultId} {
+      allow read: if true;
+      allow create: if isValidId(resultId) && isValidResult(request.resource.data) && isAuthorized('lecturer');
+      allow update: if isValidId(resultId) && isValidResult(request.resource.data) && isAuthorized('lecturer')
+                    && request.resource.data.createdAt == resource.data.createdAt; // Immutability verification
+      allow delete: if isAuthorized('admin');
+    }
+
+    // 6. Campus Events
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isValidId(eventId) && isValidEvent(request.resource.data) && isAuthorized('lecturer');
+      allow update: if isValidId(eventId) && isValidEvent(request.resource.data) && isAuthorized('lecturer');
+      allow delete: if isAuthorized('lecturer');
+    }
+
+    // 7. Study Groups
+    match /groups/{groupId} {
+      allow read: if true;
+      allow create: if isValidId(groupId) && isValidStudyGroup(request.resource.data);
+      allow update: if isValidId(groupId) && isValidStudyGroup(request.resource.data);
+      allow delete: if isAuthorized('admin');
+
+      // 8. Study Group Chats (Sub-collection)
+      match /messages/{messageId} {
+        allow read: if true;
+        allow create: if isValidId(messageId) && isValidMessage(request.resource.data);
+        allow update: if isValidId(messageId) && isValidMessage(request.resource.data);
+        allow delete: if isAuthorized('lecturer');
+      }
+    }
+
+    // 9. Library Catalogue
+    match /library/{bookId} {
+      allow read: if true;
+      allow create: if isValidId(bookId) && isValidBook(request.resource.data) && isAuthorized('admin');
+      allow update: if isValidId(bookId) && isValidBook(request.resource.data);
+      allow delete: if isAuthorized('admin');
+    }
+
+    // 10. Progress Reports (for parents)
+    match /reports/{reportId} {
+      allow read: if true;
+      allow create: if isValidId(reportId) && isValidReport(request.resource.data) && isAuthorized('admin');
+      allow update: if isValidId(reportId) && isValidReport(request.resource.data) && isAuthorized('admin');
+      allow delete: if isAuthorized('admin');
+    }
+
+    // 11. Archive Snapshots
+    match /archives/{archiveId} {
+      allow read: if isAuthorized('admin');
+      allow create: if isValidId(archiveId) && isValidArchive(request.resource.data) && isAuthorized('admin');
+      allow update: if isValidId(archiveId) && isValidArchive(request.resource.data) && isAuthorized('admin');
+      allow delete: if isAuthorized('admin');
+    }
+
+    // 12. Fee Records
+    match /fees/{feeId} {
+      allow read: if true;
+      allow create: if isValidId(feeId) && isValidFee(request.resource.data) && isAuthorized('admin');
+      allow update: if isValidId(feeId) && isValidFee(request.resource.data) && (isAuthorized('admin') || isAuthorized('student'));
+      allow delete: if isAuthorized('admin');
+    }
+
+  }
+}

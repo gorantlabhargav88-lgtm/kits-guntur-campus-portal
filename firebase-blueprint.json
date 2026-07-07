@@ -1,0 +1,232 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account containing academic role-based profile details.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The unique Firebase Authentication UID." },
+        "name": { "type": "string", "description": "Full name of the student, lecturer, or admin." },
+        "email": { "type": "string", "description": "Institutional email address." },
+        "role": { "type": "string", "enum": ["student", "lecturer", "admin"], "description": "Role determining access permissions." },
+        "department": { "type": "string", "description": "Academic department (e.g. Computer Science)." },
+        "semester": { "type": "string", "description": "Current semester (for students, e.g. Semester 3)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the profile was created." }
+      },
+      "required": ["userId", "name", "email", "role"]
+    },
+    "Assignment": {
+      "title": "Assignment",
+      "description": "Assignment created by lecturers for subjects.",
+      "type": "object",
+      "properties": {
+        "assignmentId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "subject": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "semester": { "type": "string" },
+        "uploadedBy": { "type": "string", "description": "Lecturer user ID." },
+        "pdfUrl": { "type": "string", "description": "Path or simulation URL to uploaded subject PDF resource." },
+        "pdfName": { "type": "string", "description": "Name of the uploaded PDF file." },
+        "archived": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["assignmentId", "title", "subject", "dueDate", "semester", "uploadedBy"]
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "Student submission for a specific assignment.",
+      "type": "object",
+      "properties": {
+        "submissionId": { "type": "string" },
+        "assignmentId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "content": { "type": "string" },
+        "grade": { "type": "string" },
+        "feedback": { "type": "string" },
+        "status": { "type": "string", "enum": ["submitted", "graded"] }
+      },
+      "required": ["submissionId", "assignmentId", "studentId", "submittedAt"]
+    },
+    "Attendance": {
+      "title": "Attendance Record",
+      "description": "Daily student attendance tracked per subject.",
+      "type": "object",
+      "properties": {
+        "attendanceId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "subject": { "type": "string" },
+        "date": { "type": "string", "description": "YYYY-MM-DD format" },
+        "status": { "type": "string", "enum": ["present", "absent"] },
+        "semester": { "type": "string" },
+        "markedBy": { "type": "string", "description": "Lecturer user ID." },
+        "archived": { "type": "boolean" }
+      },
+      "required": ["attendanceId", "studentId", "subject", "date", "status", "semester", "markedBy"]
+    },
+    "Result": {
+      "title": "Student Exam Result",
+      "description": "Academic exam and test grades entered by lecturers.",
+      "type": "object",
+      "properties": {
+        "resultId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "subject": { "type": "string" },
+        "examType": { "type": "string" },
+        "marks": { "type": "number" },
+        "maxMarks": { "type": "number" },
+        "grade": { "type": "string" },
+        "semester": { "type": "string" },
+        "archived": { "type": "boolean" },
+        "recordedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["resultId", "studentId", "subject", "examType", "marks", "maxMarks", "semester", "recordedBy"]
+    },
+    "CampusEvent": {
+      "title": "Campus Event",
+      "description": "General university events and academic schedule milestones.",
+      "type": "object",
+      "properties": {
+        "eventId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string" },
+        "location": { "type": "string" },
+        "category": { "type": "string", "enum": ["academic", "exam", "cultural", "sports", "workshop"] },
+        "createdBy": { "type": "string" },
+        "department": { "type": "string" },
+        "type": { "type": "string", "enum": ["event", "deadline"] }
+      },
+      "required": ["eventId", "title", "date", "category"]
+    },
+    "StudyGroup": {
+      "title": "Study Group",
+      "description": "Peer study group for real-time collaboration and subject discussion.",
+      "type": "object",
+      "properties": {
+        "groupId": { "type": "string" },
+        "name": { "type": "string" },
+        "subject": { "type": "string" },
+        "description": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "members": { "type": "array", "description": "List of user IDs participating in the study group." }
+      },
+      "required": ["groupId", "name", "subject", "createdBy"]
+    },
+    "Message": {
+      "title": "Study Group Message",
+      "description": "A real-time message sent inside a study group.",
+      "type": "object",
+      "properties": {
+        "messageId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderRole": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["messageId", "senderId", "senderName", "senderRole", "content", "timestamp"]
+    },
+    "Book": {
+      "title": "Library Book",
+      "description": "Available reference texts and novels in the campus domain.",
+      "type": "object",
+      "properties": {
+        "bookId": { "type": "string" },
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "category": { "type": "string" },
+        "status": { "type": "string", "enum": ["available", "borrowed"] },
+        "borrowedBy": { "type": "string", "description": "User ID of student currently borrowing this book, or null." },
+        "borrowedName": { "type": "string", "description": "Name of student currently borrowing this book, or null." },
+        "dueDate": { "type": "string", "description": "Due date for return, or null." }
+      },
+      "required": ["bookId", "title", "author", "category", "status"]
+    },
+    "ProgressReport": {
+      "title": "Automated Progress Report",
+      "description": "Monthly automated progress report for parents summarizing attendance and results.",
+      "type": "object",
+      "properties": {
+        "reportId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "month": { "type": "string" },
+        "semester": { "type": "string" },
+        "attendancePercentage": { "type": "number" },
+        "cgpa": { "type": "number" },
+        "gradesSummary": { "type": "string" },
+        "remarks": { "type": "string" },
+        "generatedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reportId", "studentId", "studentName", "month", "semester", "attendancePercentage", "cgpa", "generatedBy", "createdAt"]
+    },
+    "Archive": {
+      "title": "Semester Archive Record",
+      "description": "Archived snapshot containing previous semester data (assignments, results, attendance).",
+      "type": "object",
+      "properties": {
+        "archiveId": { "type": "string" },
+        "semester": { "type": "string" },
+        "archivedBy": { "type": "string" },
+        "archivedAt": { "type": "string", "format": "date-time" },
+        "summary": { "type": "string" },
+        "dataSnapshot": { "type": "string", "description": "Serialized JSON of archived objects." }
+      },
+      "required": ["archiveId", "semester", "archivedBy", "archivedAt", "summary", "dataSnapshot"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles for RBAC permissions check."
+    },
+    "/assignments/{assignmentId}": {
+      "schema": "Assignment",
+      "description": "Subject assignments uploaded by lecturers."
+    },
+    "/submissions/{submissionId}": {
+      "schema": "Submission",
+      "description": "Student coursework submissions."
+    },
+    "/attendance/{attendanceId}": {
+      "schema": "Attendance",
+      "description": "Daily attendance records marked by lecturers."
+    },
+    "/results/{resultId}": {
+      "schema": "Result",
+      "description": "Student test and exam marks."
+    },
+    "/events/{eventId}": {
+      "schema": "CampusEvent",
+      "description": "Campus activities and exams calendar."
+    },
+    "/groups/{groupId}": {
+      "schema": "StudyGroup",
+      "description": "Peer study group collections."
+    },
+    "/groups/{groupId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Real-time messages sent inside study groups."
+    },
+    "/library/{bookId}": {
+      "schema": "Book",
+      "description": "Library catalogue containing search status."
+    },
+    "/reports/{reportId}": {
+      "schema": "ProgressReport",
+      "description": "Parent progress reports generated monthly."
+    },
+    "/archives/{archiveId}": {
+      "schema": "Archive",
+      "description": "Automated historical archive records for previous semesters."
+    }
+  }
+}

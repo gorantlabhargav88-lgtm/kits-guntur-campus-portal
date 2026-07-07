@@ -1,0 +1,6 @@
+{
+  "name": "KITS Guntur Autonomous Campus Portal",
+  "description": "A premium, full-stack Academic & Institutional Management portal designed for KITS Guntur. Features high-performance multi-role RBAC dashboards for students, lecturers, and admins, real-time Firestore synchronization, AI-powered AeroAdvisor, dynamic interactive campus galleries, and an integrated Webhook Receiver Hub for external IoT and RFID sensors.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
